@@ -1,13 +1,46 @@
 import { useState, useEffect } from "react";
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import { db } from "./firebaseConfig"; // Firebase sozlamalarini import qilish
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Firebase Storage funksiyalari
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import { v4 as uuidv4 } from "uuid";
 
 import toast, { Toaster } from "react-hot-toast";
 
 function App() {
+  const storage = getStorage();
+  // map data ==> START
+  const [usersData, setUsersData] = useState([]);
+  const fetchUsersData = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "usersData"));
+      const usersArray = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      return usersArray;
+    } catch (error) {
+      console.error("Error fetching users data: ", error);
+      return [];
+    }
+  };
+  const loadUsers = async () => {
+    toast.promise(
+      fetchUsersData().then((users) => {
+        setUsersData(users);
+      }),
+      {
+        loading: "Loading ...",
+        success: <b>Successfully!</b>,
+        error: <b>Error :(</b>,
+      }
+    );
+  };
+  useEffect(() => {
+    loadUsers();
+  }, []);
+  // map data ==> END
+
   const [formData, setFormData] = useState({
     profileImg: null,
     firstName: "",
@@ -31,91 +64,41 @@ function App() {
     }));
   };
 
-  // const handleSubmit = async (e) => {
-  //   console.log("Submit ishladi")
-  //   e.preventDefault();
-  //   try {
-  //     await addDoc(collection(db, "usersData"), {
-  //       id: uuidv4(),
-  //       ...formData,
-  //       createdAt: new Date(), // Qo'shimcha yaratilgan vaqti
-  //     });
-  //     alert("User added successfully!");
-  //     setFormData({
-  //       profileImg: null,
-  //       firstName: "",
-  //       lastName: "",
-  //       birthDate: "",
-  //       phoneNumber: "",
-  //     });
-  //     document.getElementById("add_user").close(); // Modalni yopish
-  //   } catch (error) {
-  //     console.error("Error adding user: ", error);
-  //   }
-  // };
-
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-
-  //   toast.promise(
-  //     addDoc(collection(db, "usersData"), {
-  //       id: uuidv4(),
-  //       ...formData,
-  //       createdAt: new Date(), // Qo'shimcha yaratilgan vaqti
-  //     }),
-  //     {
-  //       loading: "Saving user...",
-  //       success: <b>User added successfully!</b>,
-  //       error: <b>Could not add user.</b>,
-  //     }
-  //   )
-  //     .then(() => {
-  //       setFormData({
-  //         profileImg: null,
-  //         firstName: "",
-  //         lastName: "",
-  //         birthDate: "",
-  //         phoneNumber: "",
-  //       });
-  //       document.getElementById("add_user").close(); // Modalni yopish
-  //     })
-  //     .catch((error) => {
-  //       console.error("Error adding user: ", error);
-  //     });
-  // };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Toast orqali yuklash jarayonini ko'rsatish
     toast.promise(
       (async () => {
-        let profileImgUrl = null;
+        try {
+          let profileImgUrl = null;
+          if (formData.profileImg) {
+            const profileImgRef = ref(storage, `profileImages/${uuidv4()}`);
+            await uploadBytes(profileImgRef, formData.profileImg);
+            profileImgUrl = await getDownloadURL(profileImgRef);
+          }
+          await addDoc(collection(db, "usersData"), {
+            id: uuidv4(),
+            ...formData,
+            profileImg: profileImgUrl,
+            createdAt: new Date(),
+          });
 
-        // Agar profileImg mavjud bo'lsa, uni Firebase Storage'ga yuklang
-        if (formData.profileImg) {
-          const profileImgRef = ref(storage, `profileImages/${uuidv4()}`);
-          await uploadBytes(profileImgRef, formData.profileImg);
-          profileImgUrl = await getDownloadURL(profileImgRef);
+          setFormData({
+            profileImg: null,
+            firstName: "",
+            lastName: "",
+            birthDate: "",
+            phoneNumber: "",
+          });
+          document.getElementById("add_user").close();
+          loadUsers();
+        } catch (error) {
+          console.error(
+            "Error while uploading image or saving user data:",
+            error
+          );
+          throw new Error("User addition failed.");
         }
-
-        // Firestore'da foydalanuvchi hujjatini yarating
-        await addDoc(collection(db, "usersData"), {
-          id: uuidv4(),
-          ...formData,
-          profileImg: profileImgUrl, // URL sifatida saqlaymiz
-          createdAt: new Date(),
-        });
-
-        // Formani tozalash va modalni yopish
-        setFormData({
-          profileImg: null,
-          firstName: "",
-          lastName: "",
-          birthDate: "",
-          phoneNumber: "",
-        });
-        document.getElementById("add_user").close();
       })(),
       {
         loading: "Saving user...",
@@ -125,38 +108,6 @@ function App() {
     );
   };
 
-  // map uchum ma'lumotlarni olish
-  const [usersData, setUsersData] = useState([]);
-
-  const fetchUsersData = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "usersData"));
-      const usersArray = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      return usersArray;
-    } catch (error) {
-      console.error("Error fetching users data: ", error);
-      return [];
-    }
-  };
-
-  useEffect(() => {
-    const loadUsers = async () => {
-      toast.promise(
-        fetchUsersData().then((users) => {
-          setUsersData(users); // Muvaffaqiyatli holatda ma'lumotni saqlash
-        }),
-        {
-          loading: "Loading ...",
-          success: <b>Successfully!</b>,
-          error: <b>Error :(</b>,
-        }
-      );
-    };
-    loadUsers();
-  }, []);
   return (
     <>
       <Toaster />
@@ -217,7 +168,6 @@ function App() {
         <div className="modal-box w-11/12 max-w-xl">
           <form method="dialog" className="grid grid-cols-2 text-sky-500">
             <p className="flex justify-start items-center">Add User</p>
-            {/* if there is a button in form, it will close the modal */}
             <div className="flex justify-end items-center">
               <button className="btn btn-sm btn-circle btn-ghost hover:bg-sky-100">
                 ✕
