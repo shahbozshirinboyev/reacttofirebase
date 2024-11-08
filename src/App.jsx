@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { collection, addDoc } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import { collection, addDoc, getDocs } from "firebase/firestore";
 import { db } from "./firebaseConfig"; // Firebase sozlamalarini import qilish
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Firebase Storage funksiyalari
 
@@ -56,7 +56,7 @@ function App() {
 
   // const handleSubmit = async (e) => {
   //   e.preventDefault();
-  
+
   //   toast.promise(
   //     addDoc(collection(db, "usersData"), {
   //       id: uuidv4(),
@@ -86,19 +86,19 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     // Toast orqali yuklash jarayonini ko'rsatish
     toast.promise(
       (async () => {
         let profileImgUrl = null;
-        
+
         // Agar profileImg mavjud bo'lsa, uni Firebase Storage'ga yuklang
         if (formData.profileImg) {
           const profileImgRef = ref(storage, `profileImages/${uuidv4()}`);
           await uploadBytes(profileImgRef, formData.profileImg);
           profileImgUrl = await getDownloadURL(profileImgRef);
         }
-  
+
         // Firestore'da foydalanuvchi hujjatini yarating
         await addDoc(collection(db, "usersData"), {
           id: uuidv4(),
@@ -106,7 +106,7 @@ function App() {
           profileImg: profileImgUrl, // URL sifatida saqlaymiz
           createdAt: new Date(),
         });
-  
+
         // Formani tozalash va modalni yopish
         setFormData({
           profileImg: null,
@@ -124,11 +124,43 @@ function App() {
       }
     );
   };
-  // map uchum ma'lumotlarni olish
 
+  // map uchum ma'lumotlarni olish
+  const [usersData, setUsersData] = useState([]);
+
+  const fetchUsersData = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "usersData"));
+      const usersArray = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      return usersArray;
+    } catch (error) {
+      console.error("Error fetching users data: ", error);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      toast.promise(
+        fetchUsersData().then((users) => {
+          setUsersData(users); // Muvaffaqiyatli holatda ma'lumotni saqlash
+        }),
+        {
+          loading: "Loading ...",
+          success: <b>Successfully!</b>,
+          error: <b>Error :(</b>,
+        }
+      );
+    };
+    loadUsers();
+  }, []);
   return (
     <>
-    <Toaster />
+      <Toaster />
+
       <section className="bg-sky-100">
         <button
           onClick={() => document.getElementById("add_user").showModal()}
@@ -140,39 +172,48 @@ function App() {
 
       <section className="p-5">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {usersData.map((user) => {
+            return (
+              <div
+                key={user.id}
+                className="m-2 grid grid-cols-4 border-sky-200 border p-3 rounded-lg text-sky-500"
+              >
+                <img
+                  src={
+                    user.profileImg === null
+                      ? "https://img.freepik.com/premium-vector/avatar-profile-icon-flat-style-male-user-profile-vector-illustration-isolated-background-man-profile-sign-business-concept_157943-38764.jpg" // Use a direct URL for the placeholder image
+                      : user.profileImg
+                  }
+                  alt={user.id}
+                  className="w-[100px] h-[100px] object-cover rounded-full"
+                />
 
-          <div className="m-2 grid grid-cols-4 border-sky-200 border p-3 rounded-lg text-sky-500">
-            <img
-              src="https://picsum.photos/300/400"
-              alt=""
-              className="w-[100px] h-[100px] object-cover rounded-full"
-            />
-
-            <div className="col-span-3">
-              <p>
-                <span className="font-bold">First name: </span>{" "}
-                <span>Shahboz</span>
-              </p>
-              <p>
-                <span className="font-bold">Last name: </span>{" "}
-                <span>Shirinboyev</span>
-              </p>
-              <p>
-                <span className="font-bold">Birth date: </span>{" "}
-                <span>12.03.1999</span>
-              </p>
-              <p>
-                <span className="font-bold">Phone number: </span>{" "}
-                <span>+998 93 009 11 66</span>
-              </p>
-            </div>
-          </div>
-
-          </div>
+                <div className="col-span-3">
+                  <p>
+                    <span className="font-bold">First name: </span>{" "}
+                    <span>{user.firstName}</span>
+                  </p>
+                  <p>
+                    <span className="font-bold">Last name: </span>{" "}
+                    <span>{user.lastName}</span>
+                  </p>
+                  <p>
+                    <span className="font-bold">Birth date: </span>{" "}
+                    <span>{user.birthDate}</span>
+                  </p>
+                  <p>
+                    <span className="font-bold">Phone number: </span>{" "}
+                    <span>{user.phoneNumber}</span>
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       <dialog id="add_user" className="modal">
-      <Toaster />
+        <Toaster />
         <div className="modal-box w-11/12 max-w-xl">
           <form method="dialog" className="grid grid-cols-2 text-sky-500">
             <p className="flex justify-start items-center">Add User</p>
@@ -233,7 +274,10 @@ function App() {
                 className="border rounded-md px-2 py-1"
               />
             </label>
-            <button type="submit" className="rounded-md bg-sky-100 px-2 py-2 text-sky-500 font-bold hover:bg-sky-500 hover:text-white transition-all duration-200">
+            <button
+              type="submit"
+              className="rounded-md bg-sky-100 px-2 py-2 text-sky-500 font-bold hover:bg-sky-500 hover:text-white transition-all duration-200"
+            >
               Submit
             </button>
           </form>
