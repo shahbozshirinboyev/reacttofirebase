@@ -182,7 +182,7 @@ function App() {
               </button>
             </div>
           </form>
-          <form action="" className="grid grid-cols-1 gap-4">
+          <form action="" className="grid grid-cols-1 gap-4 pt-4">
             <label htmlFor="" className="grid grid-cols-1">
               <span>Profile IMG:</span>
               <input
@@ -211,7 +211,7 @@ function App() {
               />
             </label>
             <label htmlFor="" className="grid grid-cols-1">
-              <span>Birh date:</span>
+              <span>Birh Date:</span>
               <input
                 type="date"
                 name=""
