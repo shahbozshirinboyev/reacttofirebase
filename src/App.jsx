@@ -2,7 +2,10 @@ function App() {
   return (
     <>
       <section className="bg-sky-100">
-        <button className="w-[200px] px-1 py-1 m-4 bg-sky-500 text-white hover:text-sky-500 hover:bg-white font-semibold transition-all duration-200 rounded-lg">
+        <button
+          onClick={() => document.getElementById("add_user").showModal()}
+          className="w-[200px] px-1 py-1 m-4 bg-sky-500 text-white hover:text-sky-500 hover:bg-white font-semibold transition-all duration-200 rounded-lg"
+        >
           <i class="bi bi-node-plus-fill"></i> &nbsp; Add User
         </button>
       </section>
@@ -165,9 +168,75 @@ function App() {
               </p>
             </div>
           </div>
-          
         </div>
       </section>
+
+      <dialog id="add_user" className="modal">
+        <div className="modal-box w-11/12 max-w-xl">
+          <form method="dialog" className="grid grid-cols-2 text-sky-500">
+            <p className="flex justify-start items-center">Add User</p>
+            {/* if there is a button in form, it will close the modal */}
+            <div className="flex justify-end items-center">
+              <button className="btn btn-sm btn-circle btn-ghost hover:bg-sky-100">
+                ✕
+              </button>
+            </div>
+          </form>
+          <form action="" className="grid grid-cols-1 gap-4">
+            <label htmlFor="" className="grid grid-cols-1">
+              <span>Profile IMG:</span>
+              <input
+                type="file"
+                name=""
+                id=""
+                className="border rounded-md px-2 py-1"
+              />
+            </label>
+            <label htmlFor="" className="grid grid-cols-1">
+              <span>First Name:</span>
+              <input
+                type="text"
+                name=""
+                id=""
+                className="border rounded-md px-2 py-1"
+              />
+            </label>
+            <label htmlFor="" className="grid grid-cols-1">
+              <span>Last Name:</span>
+              <input
+                type="text"
+                name=""
+                id=""
+                className="border rounded-md px-2 py-1"
+              />
+            </label>
+            <label htmlFor="" className="grid grid-cols-1">
+              <span>Birh date:</span>
+              <input
+                type="date"
+                name=""
+                id=""
+                className="border rounded-md px-2 py-1"
+              />
+            </label>
+            <label htmlFor="" className="grid grid-cols-1">
+              <span>Phone Number:</span>
+              <input
+                type="number"
+                name=""
+                id=""
+                className="border rounded-md px-2 py-1"
+              />
+            </label>
+            <button className="rounded-md bg-sky-100 px-2 py-2 text-sky-500 font-bold hover:bg-sky-500 hover:text-white transition-all duration-200">
+              Submit
+            </button>
+          </form>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button>close</button>
+        </form>
+      </dialog>
     </>
   );
 }
