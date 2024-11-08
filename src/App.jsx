@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig"; // Firebase sozlamalarini import qilish
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Firebase Storage funksiyalari
+
 import { v4 as uuidv4 } from "uuid";
+
+import toast, { Toaster } from "react-hot-toast";
 
 function App() {
   const [formData, setFormData] = useState({
@@ -27,30 +31,104 @@ function App() {
     }));
   };
 
+  // const handleSubmit = async (e) => {
+  //   console.log("Submit ishladi")
+  //   e.preventDefault();
+  //   try {
+  //     await addDoc(collection(db, "usersData"), {
+  //       id: uuidv4(),
+  //       ...formData,
+  //       createdAt: new Date(), // Qo'shimcha yaratilgan vaqti
+  //     });
+  //     alert("User added successfully!");
+  //     setFormData({
+  //       profileImg: null,
+  //       firstName: "",
+  //       lastName: "",
+  //       birthDate: "",
+  //       phoneNumber: "",
+  //     });
+  //     document.getElementById("add_user").close(); // Modalni yopish
+  //   } catch (error) {
+  //     console.error("Error adding user: ", error);
+  //   }
+  // };
+
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  
+  //   toast.promise(
+  //     addDoc(collection(db, "usersData"), {
+  //       id: uuidv4(),
+  //       ...formData,
+  //       createdAt: new Date(), // Qo'shimcha yaratilgan vaqti
+  //     }),
+  //     {
+  //       loading: "Saving user...",
+  //       success: <b>User added successfully!</b>,
+  //       error: <b>Could not add user.</b>,
+  //     }
+  //   )
+  //     .then(() => {
+  //       setFormData({
+  //         profileImg: null,
+  //         firstName: "",
+  //         lastName: "",
+  //         birthDate: "",
+  //         phoneNumber: "",
+  //       });
+  //       document.getElementById("add_user").close(); // Modalni yopish
+  //     })
+  //     .catch((error) => {
+  //       console.error("Error adding user: ", error);
+  //     });
+  // };
+
   const handleSubmit = async (e) => {
-    console.log("Submit ishladi")
     e.preventDefault();
-    try {
-      await addDoc(collection(db, "usersData"), {
-        id: uuidv4(),
-        ...formData,
-        createdAt: new Date(), // Qo'shimcha yaratilgan vaqti
-      });
-      alert("User added successfully!");
-      setFormData({
-        profileImg: null,
-        firstName: "",
-        lastName: "",
-        birthDate: "",
-        phoneNumber: "",
-      });
-      document.getElementById("add_user").close(); // Modalni yopish
-    } catch (error) {
-      console.error("Error adding user: ", error);
-    }
+  
+    // Toast orqali yuklash jarayonini ko'rsatish
+    toast.promise(
+      (async () => {
+        let profileImgUrl = null;
+        
+        // Agar profileImg mavjud bo'lsa, uni Firebase Storage'ga yuklang
+        if (formData.profileImg) {
+          const profileImgRef = ref(storage, `profileImages/${uuidv4()}`);
+          await uploadBytes(profileImgRef, formData.profileImg);
+          profileImgUrl = await getDownloadURL(profileImgRef);
+        }
+  
+        // Firestore'da foydalanuvchi hujjatini yarating
+        await addDoc(collection(db, "usersData"), {
+          id: uuidv4(),
+          ...formData,
+          profileImg: profileImgUrl, // URL sifatida saqlaymiz
+          createdAt: new Date(),
+        });
+  
+        // Formani tozalash va modalni yopish
+        setFormData({
+          profileImg: null,
+          firstName: "",
+          lastName: "",
+          birthDate: "",
+          phoneNumber: "",
+        });
+        document.getElementById("add_user").close();
+      })(),
+      {
+        loading: "Saving user...",
+        success: <b>User added successfully!</b>,
+        error: <b>Could not add user.</b>,
+      }
+    );
   };
+  // map uchum ma'lumotlarni olish
+
   return (
     <>
+    <Toaster />
       <section className="bg-sky-100">
         <button
           onClick={() => document.getElementById("add_user").showModal()}
@@ -62,6 +140,7 @@ function App() {
 
       <section className="p-5">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+
           <div className="m-2 grid grid-cols-4 border-sky-200 border p-3 rounded-lg text-sky-500">
             <img
               src="https://picsum.photos/300/400"
@@ -88,140 +167,12 @@ function App() {
               </p>
             </div>
           </div>
-          <div className="m-2 grid grid-cols-4 border-sky-200 border p-3 rounded-lg text-sky-500">
-            <img
-              src="https://picsum.photos/300/400"
-              alt=""
-              className="w-[100px] h-[100px] object-cover rounded-full"
-            />
 
-            <div className="col-span-3">
-              <p>
-                <span className="font-bold">First name: </span>{" "}
-                <span>Shahboz</span>
-              </p>
-              <p>
-                <span className="font-bold">Last name: </span>{" "}
-                <span>Shirinboyev</span>
-              </p>
-              <p>
-                <span className="font-bold">Birth date: </span>{" "}
-                <span>12.03.1999</span>
-              </p>
-              <p>
-                <span className="font-bold">Phone number: </span>{" "}
-                <span>+998 93 009 11 66</span>
-              </p>
-            </div>
           </div>
-          <div className="m-2 grid grid-cols-4 border-sky-200 border p-3 rounded-lg text-sky-500">
-            <img
-              src="https://picsum.photos/300/400"
-              alt=""
-              className="w-[100px] h-[100px] object-cover rounded-full"
-            />
-
-            <div className="col-span-3">
-              <p>
-                <span className="font-bold">First name: </span>{" "}
-                <span>Shahboz</span>
-              </p>
-              <p>
-                <span className="font-bold">Last name: </span>{" "}
-                <span>Shirinboyev</span>
-              </p>
-              <p>
-                <span className="font-bold">Birth date: </span>{" "}
-                <span>12.03.1999</span>
-              </p>
-              <p>
-                <span className="font-bold">Phone number: </span>{" "}
-                <span>+998 93 009 11 66</span>
-              </p>
-            </div>
-          </div>
-          <div className="m-2 grid grid-cols-4 border-sky-200 border p-3 rounded-lg text-sky-500">
-            <img
-              src="https://picsum.photos/300/400"
-              alt=""
-              className="w-[100px] h-[100px] object-cover rounded-full"
-            />
-
-            <div className="col-span-3">
-              <p>
-                <span className="font-bold">First name: </span>{" "}
-                <span>Shahboz</span>
-              </p>
-              <p>
-                <span className="font-bold">Last name: </span>{" "}
-                <span>Shirinboyev</span>
-              </p>
-              <p>
-                <span className="font-bold">Birth date: </span>{" "}
-                <span>12.03.1999</span>
-              </p>
-              <p>
-                <span className="font-bold">Phone number: </span>{" "}
-                <span>+998 93 009 11 66</span>
-              </p>
-            </div>
-          </div>
-          <div className="m-2 grid grid-cols-4 border-sky-200 border p-3 rounded-lg text-sky-500">
-            <img
-              src="https://picsum.photos/300/400"
-              alt=""
-              className="w-[100px] h-[100px] object-cover rounded-full"
-            />
-
-            <div className="col-span-3">
-              <p>
-                <span className="font-bold">First name: </span>{" "}
-                <span>Shahboz</span>
-              </p>
-              <p>
-                <span className="font-bold">Last name: </span>{" "}
-                <span>Shirinboyev</span>
-              </p>
-              <p>
-                <span className="font-bold">Birth date: </span>{" "}
-                <span>12.03.1999</span>
-              </p>
-              <p>
-                <span className="font-bold">Phone number: </span>{" "}
-                <span>+998 93 009 11 66</span>
-              </p>
-            </div>
-          </div>
-          <div className="m-2 grid grid-cols-4 border-sky-200 border p-3 rounded-lg text-sky-500">
-            <img
-              src="https://picsum.photos/300/400"
-              alt=""
-              className="w-[100px] h-[100px] object-cover rounded-full"
-            />
-
-            <div className="col-span-3">
-              <p>
-                <span className="font-bold">First name: </span>{" "}
-                <span>Shahboz</span>
-              </p>
-              <p>
-                <span className="font-bold">Last name: </span>{" "}
-                <span>Shirinboyev</span>
-              </p>
-              <p>
-                <span className="font-bold">Birth date: </span>{" "}
-                <span>12.03.1999</span>
-              </p>
-              <p>
-                <span className="font-bold">Phone number: </span>{" "}
-                <span>+998 93 009 11 66</span>
-              </p>
-            </div>
-          </div>
-        </div>
       </section>
 
       <dialog id="add_user" className="modal">
+      <Toaster />
         <div className="modal-box w-11/12 max-w-xl">
           <form method="dialog" className="grid grid-cols-2 text-sky-500">
             <p className="flex justify-start items-center">Add User</p>
